@@ -1,0 +1,19 @@
+package com.github.lyrric.spider.proxy;
+
+import com.github.lyrric.spider.model.HttpProxyInfo;
+
+import java.util.List;
+
+/**
+ * Created on 2020-10-30.
+ * 代理工具类，可以实现接口，从而使用自己的代理源
+ * @author wangxiaodong
+ */
+public interface HttpProxy {
+
+    /**
+     * 获取一批代理信息
+     * @return
+     */
+    List<HttpProxyInfo> get();
+}
