@@ -1,14 +1,13 @@
 package com.github.lyrric.spider;
 
-import com.github.lyrric.spider.core.Spider;
 import com.github.lyrric.spider.proxy.HttpProxy;
 import com.github.lyrric.spider.proxy.XieQuHttpProxy;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.context.ApplicationContext;
-import org.springframework.context.annotation.*;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;

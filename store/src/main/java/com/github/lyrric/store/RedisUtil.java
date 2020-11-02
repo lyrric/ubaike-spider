@@ -1,4 +1,4 @@
-package com.github.lyrric.spider.util;
+package com.github.lyrric.store;
 
 import com.github.lyrric.common.constant.RedisConstant;
 import com.github.lyrric.common.model.CompanyInfo;
@@ -6,7 +6,6 @@ import com.github.lyrric.common.model.ErrorLog;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import org.springframework.stereotype.Component;
 import redis.clients.jedis.Jedis;
 
 import javax.annotation.PostConstruct;
@@ -20,11 +19,7 @@ import java.util.concurrent.atomic.AtomicLong;
  * @author wangxiaodong
  */
 @Slf4j
-@Component
 public class RedisUtil {
-
-    @Resource
-    private Properties properties;
 
     Jedis jedis;
 
@@ -34,8 +29,7 @@ public class RedisUtil {
 
     private final AtomicLong successCount = new AtomicLong(0);
 
-    @PostConstruct
-    public void init(){
+    public RedisUtil(Properties properties){
         String host = properties.getProperty("redis.host");
         int port = Integer.parseInt(properties.getProperty("redis.port"));
         String password = properties.getProperty("redis.password");
@@ -46,31 +40,18 @@ public class RedisUtil {
     }
 
     /**
-     * 获取自增id
-     * @return
+     * 弹出公司信息
      */
-    public Long getId(){
-        return jedis.incr(RedisConstant.KEY_ID);
+    public CompanyInfo popCompanyInfo( ){
+        String json = jedis.lpop(RedisConstant.KEY_COMPANY_QUEUE);
+        return gson.fromJson(json, CompanyInfo.class);
+    }
+    /**
+     * 弹出错误信息队列
+     */
+    public ErrorLog popErrorMsg(){
+        String json = jedis.lpop(RedisConstant.KEY_ERROR_MSG);
+        return gson.fromJson(json, ErrorLog.class);
     }
 
-    /**
-     * 公司信息入队列
-     * @param companyInfo
-     */
-    public void pushCompanyInfo(CompanyInfo companyInfo){
-        long success;
-        if((success = successCount.incrementAndGet()) % 1000 == 0){
-            log.info("已保存保存公司信息数量：{}", success);
-        }
-        log.debug("保存公司信息：{}", companyInfo.getCompanyName());
-        jedis.lpush(RedisConstant.KEY_COMPANY_QUEUE, gson.toJson(companyInfo));
-    }
-    /**
-     * 错误信息入队列
-     * @param err
-     */
-    public void pushErrorMsg(ErrorLog err){
-        log.info("保存错误信息：{}", err.getErrorMsg());
-        jedis.lpush(RedisConstant.KEY_ERROR_MSG, gson.toJson(err));
-    }
 }

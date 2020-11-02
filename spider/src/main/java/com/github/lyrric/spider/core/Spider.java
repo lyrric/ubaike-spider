@@ -36,15 +36,15 @@ public class Spider {
     /** 代理数据队列 */
     final BlockingQueue<HttpProxyInfo> proxyInfos;
     /** 线程数量 */
-    final int CORE_POOL_SIZE = 10;
+    private final int CORE_POOL_SIZE = 10;
     /** 代理工具 */
     @Resource
-    HttpProxy proxy;
+    private HttpProxy proxy;
     @Resource
     private RedisUtil redisUtil;
 
     private HttpUtil httpUtil;
-    ThreadPoolExecutor executor = new ThreadPoolExecutor(10, 30,
+    private ThreadPoolExecutor executor = new ThreadPoolExecutor(CORE_POOL_SIZE, 30,
             1, TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(50),
             Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
