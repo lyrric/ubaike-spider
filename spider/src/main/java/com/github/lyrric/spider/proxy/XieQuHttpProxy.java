@@ -16,6 +16,7 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created on 2020-10-30.
@@ -27,14 +28,15 @@ public class XieQuHttpProxy implements HttpProxy {
 
     HttpUtil httpUtil = new HttpUtil();
 
+
     @Override
     public List<HttpProxyInfo> get() {
         //重试五次，避免因网络波动导致获取失败
         for (int i = 0; i < 5; i++) {
             try {
                 String json = httpUtil.get(
-                        "http://api.xiequ.cn/VAD/GetIp.aspx?act=get&num=5&time=60&plat=0&re=1&type=2&so=1&ow=1&spl=1&addr=&db=1");
-                log.debug("获取ip代理成功:{}", json);
+                        "http://api.xiequ.cn/VAD/GetIp.aspx?act=get&num=10&time=60&plat=0&re=1&type=2&so=1&ow=1&spl=1&addr=&db=1");
+                log.info("获取ip代理成功:{}", json);
                 JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
                 JsonArray data = jsonObject.getAsJsonArray("data");
                 Type collectionType = new TypeToken<List<ProxyInfo>>(){}.getType();
@@ -44,6 +46,7 @@ public class XieQuHttpProxy implements HttpProxy {
                     HttpProxyInfo info = new HttpProxyInfo();
                     info.setIp(proxyInfo.getIp());
                     info.setPort(proxyInfo.getPort());
+                    info.setScheme("http");
                     result.add(info);
                 }
                 return result;
@@ -71,9 +74,5 @@ public class XieQuHttpProxy implements HttpProxy {
          */
         @SerializedName("Port")
         private Integer port;
-        /**
-         * 过期时间
-         */
-        private Date expiry;
     }
 }

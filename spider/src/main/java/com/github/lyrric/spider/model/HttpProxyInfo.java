@@ -1,6 +1,7 @@
 package com.github.lyrric.spider.model;
 
 import lombok.Data;
+import lombok.ToString;
 
 import java.util.Date;
 
@@ -24,4 +25,8 @@ public class HttpProxyInfo {
      * 过期时间
      */
     private Date expiry;
+    /**
+     * 代理方式http或者https
+     */
+    private String scheme;
 }

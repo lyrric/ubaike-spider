@@ -29,7 +29,6 @@ public class SpiderApplication {
 
     public static void main(String[] args) {
        new AnnotationConfigApplicationContext(SpiderApplication.class);
-
     }
 
     @Bean

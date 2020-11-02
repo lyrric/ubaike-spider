@@ -1,4 +1,4 @@
-package com.github.lyrric.common.model;
+package com.github.lyrric.common.exception;
 
 /**
  * Created on 2020-10-30.
