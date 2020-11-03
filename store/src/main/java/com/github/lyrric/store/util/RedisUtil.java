@@ -21,26 +21,39 @@ import java.util.Properties;
 @Slf4j
 public class RedisUtil {
 
-    Jedis jedis;
-
     final String SUCCESS_CODE = "OK";
 
     private final Gson gson = new Gson();
 
-    public RedisUtil(Properties properties){
-        String host = properties.getProperty("redis.host");
-        int port = Integer.parseInt(properties.getProperty("redis.port"));
-        String password = properties.getProperty("redis.password");
-        this.jedis = new Jedis(host, port);
-        if(StringUtils.isNotEmpty(password) && !SUCCESS_CODE.equals(jedis.auth(password))){
-            throw new RuntimeException("redis密码验证失败");
-        }
+    private Properties properties;
+    /**
+     * 存放jedis
+     */
+    private ThreadLocal<Jedis> jedisThreadLocal = new ThreadLocal<>();
+
+    public RedisUtil(Properties properties) {
+        this.properties = properties;
     }
 
+    public Jedis init(){
+        Jedis jedis = jedisThreadLocal.get();
+        if(jedis == null){
+            String host = properties.getProperty("redis.host");
+            int port = Integer.parseInt(properties.getProperty("redis.port"));
+            String password = properties.getProperty("redis.password");
+            jedis = new Jedis(host, port);
+            if(StringUtils.isNotEmpty(password) && !SUCCESS_CODE.equals(jedis.auth(password))){
+                throw new RuntimeException("redis密码验证失败");
+            }
+            jedisThreadLocal.set(jedis);
+        }
+        return jedis;
+    }
     /**
      * 弹出公司信息
      */
     public CompanyInfo popCompanyInfo( ){
+        final Jedis jedis = init();
         final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_COMPANY_QUEUE);
         String json = data.get(1);
         return gson.fromJson(json, CompanyInfo.class);
@@ -49,6 +62,7 @@ public class RedisUtil {
      * 弹出错误信息队列
      */
     public ErrorLog popErrorMsg(){
+        final Jedis jedis = init();
         final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_ERROR_MSG);
         String json = data.get(1);
         return gson.fromJson(json, ErrorLog.class);

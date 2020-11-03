@@ -26,7 +26,6 @@ public class RedisUtil {
     @Resource
     private Properties properties;
 
-    Jedis jedis;
 
     final String SUCCESS_CODE = "OK";
 
@@ -34,15 +33,24 @@ public class RedisUtil {
 
     private final AtomicLong successCount = new AtomicLong(0);
 
-    @PostConstruct
-    public void init(){
-        String host = properties.getProperty("redis.host");
-        int port = Integer.parseInt(properties.getProperty("redis.port"));
-        String password = properties.getProperty("redis.password");
-        this.jedis = new Jedis(host, port);
-        if(StringUtils.isNotEmpty(password) && !SUCCESS_CODE.equals(jedis.auth(password))){
-            throw new RuntimeException("redis密码验证失败");
+    /**
+     * 存放jedis
+     */
+    private ThreadLocal<Jedis> jedisThreadLocal = new ThreadLocal<>();
+
+    public Jedis init(){
+        Jedis jedis = jedisThreadLocal.get();
+        if(jedis == null){
+            String host = properties.getProperty("redis.host");
+            int port = Integer.parseInt(properties.getProperty("redis.port"));
+            String password = properties.getProperty("redis.password");
+            jedis = new Jedis(host, port);
+            if(StringUtils.isNotEmpty(password) && !SUCCESS_CODE.equals(jedis.auth(password))){
+                throw new RuntimeException("redis密码验证失败");
+            }
+            jedisThreadLocal.set(jedis);
         }
+        return jedis;
     }
 
     /**
@@ -50,6 +58,7 @@ public class RedisUtil {
      * @return
      */
     public Long getId(){
+        final Jedis jedis = init();
         return jedis.incr(RedisConstant.KEY_ID);
     }
 
@@ -58,6 +67,7 @@ public class RedisUtil {
      * @param companyInfoModel
      */
     public void pushCompanyInfo(CompanyInfoModel companyInfoModel){
+        final Jedis jedis = init();
         long success;
         if((success = successCount.incrementAndGet()) % 1000 == 0){
             log.info("已保存保存公司信息数量：{}", success);
@@ -70,6 +80,7 @@ public class RedisUtil {
      * @param err
      */
     public void pushErrorMsg(ErrorLogModel err){
+        final Jedis jedis = init();
         log.info("保存错误信息：{}", err.getErrorMsg());
         jedis.lpush(RedisConstant.KEY_ERROR_MSG, gson.toJson(err));
     }

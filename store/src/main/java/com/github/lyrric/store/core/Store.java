@@ -18,6 +18,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created on 2020-11-03.
@@ -32,6 +33,8 @@ public class Store {
 
     /** 线程数量 */
     final int CORE_POOL_SIZE = 5;
+
+    private AtomicLong count = new AtomicLong(0);
 
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(11, 30,
             1, TimeUnit.MINUTES,
@@ -66,6 +69,10 @@ public class Store {
                 companyInfo.setCreateTime(date);
                 companyInfo.setUpdateTime(date);
                 mapper.insert(companyInfo);
+                long t;
+                if((t = count.incrementAndGet()) % 1000 == 0){
+                    log.info("已保存数据{}条", t);
+                }
             }catch (Exception e){
                 log.error("保存工商数据时发生错误,{}", companyInfo, e);
             }
