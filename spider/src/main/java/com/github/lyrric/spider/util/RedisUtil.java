@@ -1,8 +1,8 @@
 package com.github.lyrric.spider.util;
 
 import com.github.lyrric.common.constant.RedisConstant;
-import com.github.lyrric.common.model.CompanyInfo;
-import com.github.lyrric.common.model.ErrorLog;
+import com.github.lyrric.common.model.CompanyInfoModel;
+import com.github.lyrric.common.model.ErrorLogModel;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -55,21 +55,21 @@ public class RedisUtil {
 
     /**
      * 公司信息入队列
-     * @param companyInfo
+     * @param companyInfoModel
      */
-    public void pushCompanyInfo(CompanyInfo companyInfo){
+    public void pushCompanyInfo(CompanyInfoModel companyInfoModel){
         long success;
         if((success = successCount.incrementAndGet()) % 1000 == 0){
             log.info("已保存保存公司信息数量：{}", success);
         }
-        log.debug("保存公司信息：{}", companyInfo.getCompanyName());
-        jedis.lpush(RedisConstant.KEY_COMPANY_QUEUE, gson.toJson(companyInfo));
+        log.debug("保存公司信息：{}", companyInfoModel.getCompanyName());
+        jedis.lpush(RedisConstant.KEY_COMPANY_QUEUE, gson.toJson(companyInfoModel));
     }
     /**
      * 错误信息入队列
      * @param err
      */
-    public void pushErrorMsg(ErrorLog err){
+    public void pushErrorMsg(ErrorLogModel err){
         log.info("保存错误信息：{}", err.getErrorMsg());
         jedis.lpush(RedisConstant.KEY_ERROR_MSG, gson.toJson(err));
     }

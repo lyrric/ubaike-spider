@@ -1,17 +1,17 @@
-package com.github.lyrric.store;
+package com.github.lyrric.store.util;
 
 import com.github.lyrric.common.constant.RedisConstant;
-import com.github.lyrric.common.model.CompanyInfo;
-import com.github.lyrric.common.model.ErrorLog;
+import com.github.lyrric.common.model.CompanyInfoModel;
+import com.github.lyrric.common.model.ErrorLogModel;
+import com.github.lyrric.store.entity.CompanyInfo;
+import com.github.lyrric.store.entity.ErrorLog;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import redis.clients.jedis.Jedis;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.Resource;
+import java.util.List;
 import java.util.Properties;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created on 2020-10-30.
@@ -27,8 +27,6 @@ public class RedisUtil {
 
     private final Gson gson = new Gson();
 
-    private final AtomicLong successCount = new AtomicLong(0);
-
     public RedisUtil(Properties properties){
         String host = properties.getProperty("redis.host");
         int port = Integer.parseInt(properties.getProperty("redis.port"));
@@ -43,14 +41,16 @@ public class RedisUtil {
      * 弹出公司信息
      */
     public CompanyInfo popCompanyInfo( ){
-        String json = jedis.lpop(RedisConstant.KEY_COMPANY_QUEUE);
+        final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_COMPANY_QUEUE);
+        String json = data.get(1);
         return gson.fromJson(json, CompanyInfo.class);
     }
     /**
      * 弹出错误信息队列
      */
     public ErrorLog popErrorMsg(){
-        String json = jedis.lpop(RedisConstant.KEY_ERROR_MSG);
+        final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_ERROR_MSG);
+        String json = data.get(1);
         return gson.fromJson(json, ErrorLog.class);
     }
 

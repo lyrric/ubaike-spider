@@ -2,8 +2,8 @@ package com.github.lyrric.spider.core;
 
 import com.github.lyrric.common.exception.BusinessException;
 import com.github.lyrric.common.exception.ParseHtmlException;
-import com.github.lyrric.common.model.CompanyInfo;
-import com.github.lyrric.common.model.ErrorLog;
+import com.github.lyrric.common.model.CompanyInfoModel;
+import com.github.lyrric.common.model.ErrorLogModel;
 import com.github.lyrric.spider.model.HttpProxyInfo;
 import com.github.lyrric.spider.parser.HtmlParser;
 import com.github.lyrric.spider.proxy.HttpProxy;
@@ -12,7 +12,9 @@ import com.github.lyrric.spider.util.RedisUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.http.Header;
 import org.apache.http.HttpStatus;
+import org.apache.http.NameValuePair;
 import org.apache.http.message.BasicHeader;
+import org.apache.http.message.BasicNameValuePair;
 import org.jsoup.HttpStatusException;
 import org.springframework.stereotype.Component;
 
@@ -22,7 +24,6 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * Created on 2020-10-30.
@@ -59,6 +60,7 @@ public class Spider {
         for (int i = 0; i < CORE_POOL_SIZE; i++) {
             executor.submit(this::run);
         }
+        executor.submit(this::run);
     }
     /**
      * 爬虫具体执行的逻辑
@@ -69,11 +71,14 @@ public class Spider {
         //2:获取http代理
         //3:请求html页面，并解析
         //4：放入redis队列中
+
+        //count代表当前ip所发请求的数量
+        int count = 0;
         Long webId = redisUtil.getId();
-        HttpProxyInfo proxy = get();
+        HttpProxyInfo proxy = getProxy();
         do {
             if(proxy == null){
-                log.error("thread id {} 没有获取到代理信息，线程退出", Thread.currentThread().getId());
+                log.error("thread {} 没有获取到代理信息，线程退出", Thread.currentThread().getName());
                 return;
             }
             String html = null;
@@ -82,18 +87,18 @@ public class Spider {
                 //判断代理是否过期,提前半秒过期
                 //noinspection AlibabaUndefineMagicConstant
                 if (expiry != null && expiry.getTime() > (System.currentTimeMillis() - 500)) {
-                    proxy = get();
+                    proxy = getProxy();
+                    //计数器清零
+                    log.info("代理过期或blocked，该代理共获取公司数量：{}", count);
+                    count = 0;
                     continue;
                 }
+                count++;
                 html = httpUtil.get("https://m.ubaike.cn/show_" + webId + ".html", null, DEFAULT_HEADER,
                         proxy.getIp(), proxy.getPort(), proxy.getScheme());
-                if(html == null){
-                    //ip被block，重新获取代理
-                    proxy = get();
-                    continue;
-                }
-                CompanyInfo companyInfo = HtmlParser.parseHtml(html);
-                redisUtil.pushCompanyInfo(companyInfo);
+                CompanyInfoModel companyInfoModel = HtmlParser.parseHtml(html);
+                companyInfoModel.setRegisterAmount(getRegisterAmount(webId));
+                redisUtil.pushCompanyInfo(companyInfoModel);
                 webId = redisUtil.getId();
             }catch (HttpStatusException e){
                 if(e.getStatusCode() == HttpStatus.SC_NOT_FOUND){
@@ -101,13 +106,17 @@ public class Spider {
                     webId = redisUtil.getId();
                 }else if(e.getStatusCode() == HttpStatus.SC_MOVED_TEMPORARILY){
                     //302代表重定向，此IP已被block
-                    log.info("http 302：{}，代理信息：{}，判定为ip 被block ，重新获取代理",e.getMessage(), proxy.toString());
-                    proxy = get();
+                    log.info("http 302：{}，代理信息：{}，判定为ip blocked ，重新获取代理",e.getMessage(), proxy.toString());
+                    log.info("代理过期或blocked，该代理共获取数据：{}条", count);
+                    count = 0;
+                    proxy = getProxy();
                 }
             }catch (IOException e){
                 //大概率是代理过期，重新尝试即可
                 log.info("发生IOException异常：{}，代理信息：{}，判定为ip代理失效，重新获取代理",e.getMessage(), proxy.toString());
-                proxy = get();
+                log.info("代理过期或blocked，该代理共获取数据：{}条", count);
+                count = 0;
+                proxy = getProxy();
             }catch (ParseHtmlException | BusinessException e){
                 saveErrLog(webId, e.getMessage(), html);
                 webId = redisUtil.getId();
@@ -121,7 +130,7 @@ public class Spider {
      * 获取一个http代理
      * @return
      */
-    private HttpProxyInfo get(){
+    private HttpProxyInfo getProxy(){
         HttpProxyInfo proxyInfo = proxyInfos.poll();
         //如果从队列里没有获取到代理信息，则需要重新获取代理信息加入到队列中
         if(proxyInfo == null){
@@ -157,13 +166,32 @@ public class Spider {
         return headers;
     }
 
+    //存储错误记录
     private void saveErrLog(long webId, String errorMsg, String html) {
         //解析html失败，保存进日志中
-        ErrorLog errorLog = new ErrorLog();
-        errorLog.setWebId(webId);
-        errorLog.setErrorMsg(errorMsg);
-        errorLog.setResponseContent(html);
-        errorLog.setCreateTime(new Date());
-        redisUtil.pushErrorMsg(errorLog);
+        ErrorLogModel errorLogModel = new ErrorLogModel();
+        errorLogModel.setWebId(webId);
+        errorLogModel.setErrorMsg(errorMsg);
+        errorLogModel.setResponseContent(html);
+        errorLogModel.setCreateTime(new Date());
+        redisUtil.pushErrorMsg(errorLogModel);
     }
+
+    /**
+     * 获取注册资本
+     * @param webId
+     * @return
+     */
+    private String getRegisterAmount(Long webId){
+        List<NameValuePair> pairs = new ArrayList<>();
+        pairs.add(new BasicNameValuePair("topic_id", webId.toString()));
+        String value = null;
+        try {
+            value = httpUtil.post("https://m.ubaike.cn/index.php?index/zcziben", pairs);
+        } catch (IOException e) {
+            log.error("获取注册资本时发生异常", e);
+        }
+        return value;
+    }
+
 }

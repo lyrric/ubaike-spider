@@ -10,7 +10,7 @@ import java.util.Date;
  * @author wangxiaodong
  */
 @Data
-public class ErrorLog {
+public class ErrorLogModel {
 
     private Long id;
     /** 页面id **/

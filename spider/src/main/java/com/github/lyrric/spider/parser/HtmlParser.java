@@ -1,15 +1,13 @@
 package com.github.lyrric.spider.parser;
 
 import com.github.lyrric.common.exception.ParseHtmlException;
-import com.github.lyrric.common.model.CompanyInfo;
+import com.github.lyrric.common.model.CompanyInfoModel;
 import lombok.extern.slf4j.Slf4j;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.nodes.Node;
 
-import java.io.File;
-import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
@@ -29,7 +27,7 @@ public class HtmlParser {
      * @param html
      * @return
      */
-    public static CompanyInfo parseHtml(String html){
+    public static CompanyInfoModel parseHtml(String html){
         try {
             Document doc = Jsoup.parse(html);
             return parseCompanyBasicInfo(doc);
@@ -40,9 +38,9 @@ public class HtmlParser {
 
     }
 
-    private static CompanyInfo parseCompanyBasicInfo(Document doc){
+    private static CompanyInfoModel parseCompanyBasicInfo(Document doc){
         Element element = doc.selectFirst("div[id=partners]");
-        CompanyInfo companyInfo = new CompanyInfo();
+        CompanyInfoModel companyInfoModel = new CompanyInfoModel();
         List<Node> subNodes = element.childNodes();
         subNodes.forEach(node -> {
             if(node instanceof Element){
@@ -52,41 +50,43 @@ public class HtmlParser {
                 value = ((Element) node).selectFirst("div[class=basic-item-right]").childNode(0).attributes().asList().get(0).getValue();
                 switch (key){
                     case "企业名称":
-                        companyInfo.setCompanyName(value);break;
+                        companyInfoModel.setCompanyName(value);break;
                     case "法定代表人":
-                        companyInfo.setLegalRepresentative(value);break;
+                        companyInfoModel.setLegalRepresentative(value);break;
                     case "注册号":
-                        companyInfo.setRegisterNumber(value);break;
+                        companyInfoModel.setRegisterNumber(value);break;
                     case "统一社会信用代码":
-                        companyInfo.setCreditCode(value);break;
+                        companyInfoModel.setCreditCode(value);break;
                     case "注册资本":
-                        companyInfo.setRegisterAmount(value);break;
+                        //这里的注册资本是不准确的，需要调用接口重新获取
+                        //companyInfo.setRegisterAmount(value);
+                        break;
                     case "成立日期":
                         DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
                         Date date = null;
                         try {
                             date = format.parse(value);
                         } catch (ParseException e) {
-                            log.error("尝试将字符串:{} 转换为Date类型时失败, company name is {}",value, companyInfo.getCompanyName());
+                            log.error("尝试将字符串:{} 转换为Date类型时失败, company name is {}",value, companyInfoModel.getCompanyName());
                         }
-                        companyInfo.setRegisterDate(date);break;
+                        companyInfoModel.setRegisterDate(date);break;
                     case "企业类型":
-                        companyInfo.setCompanyType(value);break;
+                        companyInfoModel.setCompanyType(value);break;
                     case "经营范围":
-                        companyInfo.setScopeOfBusiness(value);break;
+                        companyInfoModel.setScopeOfBusiness(value);break;
                     case "注册地址":
-                        companyInfo.setRegisterAddress(value);break;
+                        companyInfoModel.setRegisterAddress(value);break;
                     case "营业期限":
-                        companyInfo.setTermOfBusiness(value);break;
+                        companyInfoModel.setTermOfBusiness(value);break;
                     case "登记机关":
-                        companyInfo.setRegisterAgency(value);break;
+                        companyInfoModel.setRegisterAgency(value);break;
                     case "经营状态":
-                        companyInfo.setStatus(value);break;
+                        companyInfoModel.setStatus(value);break;
                     default:
                 }
             }
         });
-        return companyInfo;
+        return companyInfoModel;
     }
 
 }

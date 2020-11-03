@@ -32,12 +32,11 @@ public class SpiderApplication {
 
     @Bean
     public Properties properties() throws IOException {
-        Properties prop = new Properties();
         try (InputStream inputStream = SpiderApplication.class.getResourceAsStream("/application.properties");){
-            prop.load(inputStream);
-            for (Map.Entry<Object, Object> entry : prop.entrySet()) {
-                properties.putIfAbsent(entry.getKey(), entry.getValue());
-            }
+            properties.load(inputStream);
+//            for (Map.Entry<Object, Object> entry : prop.entrySet()) {
+//                properties.putIfAbsent(entry.getKey(), entry.getValue());
+//            }
         } catch (IOException e) {
             log.error("读取application.properties文件时发生错误", e);
             throw e;

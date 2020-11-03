@@ -4,14 +4,18 @@ import org.apache.commons.codec.Charsets;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.http.*;
 import org.apache.http.client.config.RequestConfig;
+import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
+import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.HttpStatusException;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.*;
 
 /**
@@ -74,5 +78,21 @@ public class HttpUtil {
         }
     }
 
+    public String post(String url, List <NameValuePair> pairs) throws IOException {
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.setEntity(new UrlEncodedFormEntity(pairs));
+        CloseableHttpResponse response = httpclient.execute(httpPost);
+        try {
+            int statusCode = response.getStatusLine().getStatusCode();
+            if(statusCode == HttpStatus.SC_OK){
+                HttpEntity entity = response.getEntity();
+                return EntityUtils.toString(entity, Charsets.UTF_8);
+            }else {
+                throw new HttpStatusException("状态码异常", statusCode, url);
+            }
+        } finally {
+            response.close();
+        }
+    }
 
 }

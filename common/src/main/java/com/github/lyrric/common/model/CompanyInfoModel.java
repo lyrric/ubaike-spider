@@ -10,7 +10,7 @@ import java.util.Date;
  * @author wangxiaodong
  */
 @Data
-public class CompanyInfo {
+public class CompanyInfoModel {
 
   private Long id;
     /** 公司名称 **/
