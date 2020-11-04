@@ -115,7 +115,7 @@ public class HtmlParser {
                 break;
             case "成立日期":
                 //无效数据判定
-                if(!value.startsWith("0")){
+                if(value != null && !value.startsWith("0")){
                     DateFormat format = new SimpleDateFormat("yyyy-MM-dd");
                     Date date = null;
                     try {
