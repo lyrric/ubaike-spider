@@ -43,7 +43,7 @@ CREATE TABLE `company_info` (
   KEY `company_name` (`company_name`),
   KEY `status` (`status`),
   KEY `create_time` (`create_time`)
-) ENGINE=InnoDB AUTO_INCREMENT=3767 DEFAULT CHARSET=utf8 COMMENT='企业基本信息';
+) ENGINE=InnoDB AUTO_INCREMENT=1  DEFAULT CHARSET=utf8 COMMENT='企业基本信息';
 
 -- ----------------------------
 -- Table structure for error_log
@@ -56,4 +56,4 @@ CREATE TABLE `error_log` (
   `html` longtext COMMENT 'html内容',
   `create_time` datetime DEFAULT NULL COMMENT '创建时间',
   PRIMARY KEY (`id`)
-) ENGINE=InnoDB AUTO_INCREMENT=14 DEFAULT CHARSET=utf8 COMMENT='出错记录';
+) ENGINE=InnoDB AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COMMENT='出错记录';
