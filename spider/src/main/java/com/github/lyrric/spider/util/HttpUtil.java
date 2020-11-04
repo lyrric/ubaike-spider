@@ -8,15 +8,15 @@ import org.apache.http.client.entity.UrlEncodedFormEntity;
 import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.apache.http.message.BasicNameValuePair;
 import org.apache.http.util.EntityUtils;
 import org.jsoup.HttpStatusException;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Created on 2020-10-28.
@@ -53,46 +53,43 @@ public class HttpUtil {
             url+=t;
         }
         HttpGet httpGet = new HttpGet(url);
+        setConfig(httpGet, headers, proxyHost, port, scheme);
+        return execute(httpGet);
+    }
+
+    public String post(String url, List <NameValuePair> pairs, List<Header> headers, String proxyHost, Integer port, String scheme) throws IOException {
+        HttpPost httpPost = new HttpPost(url);
+        httpPost.setEntity(new UrlEncodedFormEntity(pairs));
+        setConfig(httpPost, headers, proxyHost, port, scheme);
+        return execute(httpPost);
+    }
+
+    private void setConfig(HttpRequestBase http, List<Header> headers, String proxyHost, Integer port, String scheme){
         if(headers != null && headers.size() > 0){
-            httpGet.setHeaders(headers.toArray(new Header[0]));
+            http.setHeaders(headers.toArray(new Header[0]));
+            http.addHeader("Connection", "close");
         }
         RequestConfig.Builder builder = RequestConfig.custom();
         builder.setRedirectsEnabled(false)
                 //我猜这里的单位是毫秒
-                .setConnectTimeout(5000);
+                .setConnectTimeout(3000);
         if(StringUtils.isNotEmpty(proxyHost) && port != null){
             // 设置Http代理
             HttpHost proxy = new HttpHost(proxyHost, port, scheme);
             builder .setProxy(proxy);
         }
-        httpGet.setConfig(builder.build());
-        try (CloseableHttpResponse response = httpclient.execute(httpGet)) {
-            int statusCode = response.getStatusLine().getStatusCode();
-            if(statusCode == HttpStatus.SC_OK){
-                HttpEntity entity = response.getEntity();
-                return EntityUtils.toString(entity, Charsets.UTF_8);
-            }else {
-                throw new HttpStatusException("状态码异常", statusCode, url);
-            }
-
-        }
+        http.setConfig(builder.build());
     }
 
-    public String post(String url, List <NameValuePair> pairs) throws IOException {
-        HttpPost httpPost = new HttpPost(url);
-        httpPost.setEntity(new UrlEncodedFormEntity(pairs));
-        CloseableHttpResponse response = httpclient.execute(httpPost);
-        try {
+    private String execute(HttpRequestBase http) throws IOException {
+        try (CloseableHttpResponse response = httpclient.execute(http)) {
             int statusCode = response.getStatusLine().getStatusCode();
-            if(statusCode == HttpStatus.SC_OK){
+            if (statusCode == HttpStatus.SC_OK) {
                 HttpEntity entity = response.getEntity();
                 return EntityUtils.toString(entity, Charsets.UTF_8);
-            }else {
-                throw new HttpStatusException("状态码异常", statusCode, url);
+            } else {
+                throw new HttpStatusException("状态码异常", statusCode, http.getURI().toString());
             }
-        } finally {
-            response.close();
         }
     }
-
 }

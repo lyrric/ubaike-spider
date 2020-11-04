@@ -18,7 +18,7 @@ public class ErrorLogModel {
     /** 错误信息 **/
     private String errorMsg;
     /** html内容 **/
-    private String responseContent;
+    private String html;
     /** 创建时间 **/
     private Date createTime;
 }

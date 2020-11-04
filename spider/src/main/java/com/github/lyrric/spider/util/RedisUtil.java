@@ -69,7 +69,7 @@ public class RedisUtil {
     public void pushCompanyInfo(CompanyInfoModel companyInfoModel){
         final Jedis jedis = init();
         long success;
-        if((success = successCount.incrementAndGet()) % 1000 == 0){
+        if((success = successCount.incrementAndGet()) % 100 == 0){
             log.info("已保存保存公司信息数量：{}", success);
         }
         log.debug("保存公司信息：{}", companyInfoModel.getCompanyName());

@@ -35,23 +35,24 @@ import java.util.concurrent.*;
 public class Spider {
 
     /** 代理数据队列 */
-    final BlockingQueue<HttpProxyInfo> proxyInfos;
+    //final BlockingQueue<HttpProxyInfo> proxyInfos;
     /** 线程数量 */
     private final int CORE_POOL_SIZE = 10;
     /** 代理工具 */
     @Resource
-    private HttpProxy proxy;
+    private HttpProxy proxyUtil;
     @Resource
     private RedisUtil redisUtil;
 
     private HttpUtil httpUtil;
+
     private ThreadPoolExecutor executor = new ThreadPoolExecutor(CORE_POOL_SIZE, 30,
             1, TimeUnit.MINUTES,
             new ArrayBlockingQueue<>(50),
             Executors.defaultThreadFactory(), new ThreadPoolExecutor.AbortPolicy());
 
     public Spider() {
-        proxyInfos = new LinkedBlockingDeque<>();
+        //proxyInfos = new LinkedBlockingDeque<>();
         httpUtil = new HttpUtil();
     }
 
@@ -60,7 +61,6 @@ public class Spider {
         for (int i = 0; i < CORE_POOL_SIZE; i++) {
             executor.submit(this::run);
         }
-        executor.submit(this::run);
     }
     /**
      * 爬虫具体执行的逻辑
@@ -75,7 +75,9 @@ public class Spider {
         //count代表当前ip所发请求的数量
         int count = 0;
         Long webId = redisUtil.getId();
-        HttpProxyInfo proxy = getProxy();
+        HttpProxyInfo proxy = proxyUtil.getOne();
+        long startTime = System.currentTimeMillis();
+        CompanyInfoModel companyInfoModel = null;
         do {
             if(proxy == null){
                 log.error("thread {} 没有获取到代理信息，线程退出", Thread.currentThread().getName());
@@ -87,19 +89,24 @@ public class Spider {
                 //判断代理是否过期,提前半秒过期
                 //noinspection AlibabaUndefineMagicConstant
                 if (expiry != null && expiry.getTime() > (System.currentTimeMillis() - 500)) {
-                    proxy = getProxy();
+                    proxy = proxyUtil.getOne();
                     //计数器清零
-                    log.info("代理过期或blocked，该代理共获取公司数量：{}", count);
+                    log.info("代理blocked，该代理使用时间：{}秒，共获取数据：{}条", (int)((System.currentTimeMillis()-startTime)/1000), count);
                     count = 0;
+                    startTime = System.currentTimeMillis();
                     continue;
                 }
                 count++;
-                html = httpUtil.get("https://m.ubaike.cn/show_" + webId + ".html", null, DEFAULT_HEADER,
-                        proxy.getIp(), proxy.getPort(), proxy.getScheme());
-                CompanyInfoModel companyInfoModel = HtmlParser.parseHtml(html);
-                companyInfoModel.setRegisterAmount(getRegisterAmount(webId));
+                if(companyInfoModel == null){
+                    html = httpUtil.get("https://m.ubaike.cn/show_" + webId + ".html", null, DEFAULT_HEADER,
+                            proxy.getIp(), proxy.getPort(), proxy.getScheme());
+                    companyInfoModel = HtmlParser.parseHtml(html);
+                }
+                companyInfoModel.setRegisterAmount(getRegisterAmount(webId, proxy));
                 redisUtil.pushCompanyInfo(companyInfoModel);
+                companyInfoModel = null;
                 webId = redisUtil.getId();
+                Thread.sleep(300);
             }catch (HttpStatusException e){
                 if(e.getStatusCode() == HttpStatus.SC_NOT_FOUND){
                     //404代表没有数据，忽略获取下一个数据
@@ -107,49 +114,56 @@ public class Spider {
                 }else if(e.getStatusCode() == HttpStatus.SC_MOVED_TEMPORARILY){
                     //302代表重定向，此IP已被block
                     log.info("http 302：{}，代理信息：{}，判定为ip blocked ，重新获取代理",e.getMessage(), proxy.toString());
-                    log.info("代理过期或blocked，该代理共获取数据：{}条", count);
+                    log.info("代理blocked，该代理使用时间：{}秒，共获取数据：{}条", (int)((System.currentTimeMillis()-startTime)/1000), count);
                     count = 0;
-                    proxy = getProxy();
+                    proxy = proxyUtil.getOne();
+                    startTime = System.currentTimeMillis();
                 }
             }catch (IOException e){
                 //大概率是代理过期，重新尝试即可
                 log.info("发生IOException异常：{}，代理信息：{}，判定为ip代理失效，重新获取代理",e.getMessage(), proxy.toString());
-                log.info("代理过期或blocked，该代理共获取数据：{}条", count);
+                log.info("代理过期，该代理使用时间：{}秒，共获取数据：{}条", (int)((System.currentTimeMillis()-startTime)/1000), count);
                 count = 0;
-                proxy = getProxy();
-            }catch (ParseHtmlException | BusinessException e){
+                proxy = proxyUtil.getOne();
+                startTime = System.currentTimeMillis();
+            }catch (ParseHtmlException e){
+                log.error("解析html错误 webId {}", webId);
+                webId = redisUtil.getId();
+            }catch (BusinessException e){
+                log.error("未知异常 webId {}", webId, e);
                 saveErrLog(webId, e.getMessage(), html);
                 webId = redisUtil.getId();
+            } catch (InterruptedException e) {
+                log.error("线程异常打断", e);
             }
         } while (true);
-
 
     }
 
     /**
-     * 获取一个http代理
+     * 获取http代理
      * @return
      */
-    private HttpProxyInfo getProxy(){
-        HttpProxyInfo proxyInfo = proxyInfos.poll();
-        //如果从队列里没有获取到代理信息，则需要重新获取代理信息加入到队列中
-        if(proxyInfo == null){
-            synchronized (proxyInfos){
-                //加入判断，其它线程可能已经新增了代理信息
-                if(proxyInfos.size() == 0){
-                    //获取代理
-                    List<HttpProxyInfo> results = proxy.get();
-                    if(results == null){
-                        //没有获取到ip代理信息
-                        return null;
-                    }
-                    proxyInfos.addAll(results);
-                }
-                proxyInfo = proxyInfos.poll();
-            }
-        }
-        return proxyInfo;
-    }
+//    private HttpProxyInfo getProxy(int count){
+//        HttpProxyInfo proxyInfo = proxyInfos.poll();
+//        //如果从队列里没有获取到代理信息，则需要重新获取代理信息加入到队列中
+//        if(proxyInfo == null){
+//            synchronized (proxyInfos){
+//                //加入判断，其它线程可能已经新增了代理信息
+//                if(proxyInfos.size() == 0){
+//                    //获取代理
+//                    List<HttpProxyInfo> results = proxy.get(count);
+//                    if(results == null){
+//                        //没有获取到ip代理信息
+//                        return null;
+//                    }
+//                    proxyInfos.addAll(results);
+//                }
+//                proxyInfo = proxyInfos.poll();
+//            }
+//        }
+//        return proxyInfo;
+//    }
 
     private final List<Header> DEFAULT_HEADER = getDefaultHeader();
 
@@ -172,7 +186,7 @@ public class Spider {
         ErrorLogModel errorLogModel = new ErrorLogModel();
         errorLogModel.setWebId(webId);
         errorLogModel.setErrorMsg(errorMsg);
-        errorLogModel.setResponseContent(html);
+        errorLogModel.setHtml(html);
         errorLogModel.setCreateTime(new Date());
         redisUtil.pushErrorMsg(errorLogModel);
     }
@@ -182,14 +196,15 @@ public class Spider {
      * @param webId
      * @return
      */
-    private String getRegisterAmount(Long webId){
+    private String getRegisterAmount(Long webId, HttpProxyInfo info) throws IOException {
         List<NameValuePair> pairs = new ArrayList<>();
         pairs.add(new BasicNameValuePair("topic_id", webId.toString()));
         String value = null;
         try {
-            value = httpUtil.post("https://m.ubaike.cn/index.php?index/zcziben", pairs);
+            value = httpUtil.post("https://m.ubaike.cn/index.php?index/zcziben", pairs, DEFAULT_HEADER, info.getIp(), info.getPort(), info.getScheme());
         } catch (IOException e) {
-            log.error("获取注册资本时发生异常", e);
+            log.error("获取注册资本时发生异常 web id {}，err msg：{}", webId,e.getMessage());
+            throw e;
         }
         return value;
     }

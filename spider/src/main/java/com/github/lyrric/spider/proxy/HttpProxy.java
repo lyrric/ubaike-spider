@@ -13,7 +13,16 @@ public interface HttpProxy {
 
     /**
      * 获取一批代理信息
+     * @param count 数量
      * @return
      */
-    List<HttpProxyInfo> get();
+    List<HttpProxyInfo> getList(int count);
+
+    /**
+     * 获取一个代理信息
+     * @return
+     */
+    HttpProxyInfo getOne();
+
+
 }
