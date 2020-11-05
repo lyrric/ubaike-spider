@@ -202,8 +202,8 @@ public class Spider {
         String value = null;
         try {
             value = httpUtil.post("https://m.ubaike.cn/index.php?index/zcziben", pairs, DEFAULT_HEADER, info.getIp(), info.getPort(), info.getScheme());
-        } catch (IOException e) {
-            log.error("获取注册资本时发生异常 web id {}，err msg：{}", webId,e.getMessage());
+        } catch (HttpStatusException e) {
+            log.error("获取注册资本时发生异常 web id {}，err msg：{}, http status {}", webId,e.getMessage(), e.getStatusCode());
             throw e;
         }
         return value;
