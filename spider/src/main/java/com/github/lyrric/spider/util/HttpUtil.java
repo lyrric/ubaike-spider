@@ -32,7 +32,7 @@ public class HttpUtil {
     public HttpUtil() {
         //httpclient = HttpClients.createDefault();
         SocketConfig socketConfig = SocketConfig.custom()
-                .setSoTimeout(3000)
+                .setSoTimeout(5000)
                 .build();
         httpclient = HttpClients.custom()
                 .setDefaultSocketConfig(socketConfig)
@@ -80,9 +80,9 @@ public class HttpUtil {
         RequestConfig.Builder builder = RequestConfig.custom();
         builder.setRedirectsEnabled(false)
                 //我猜这里的单位是毫秒
-                .setConnectTimeout(3000)
-                .setSocketTimeout(3000)
-                .setConnectionRequestTimeout(3000);
+                .setConnectTimeout(5000)
+                .setSocketTimeout(5000)
+                .setConnectionRequestTimeout(5000);
         if(StringUtils.isNotEmpty(proxyHost) && port != null){
             // 设置Http代理
             HttpHost proxy = new HttpHost(proxyHost, port, scheme);
