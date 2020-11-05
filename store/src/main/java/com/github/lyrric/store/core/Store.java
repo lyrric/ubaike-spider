@@ -32,7 +32,7 @@ public class Store {
     private RedisUtil redisUtil;
 
     /** 线程数量 */
-    final int CORE_POOL_SIZE = 5;
+    final int CORE_POOL_SIZE = 2;
 
     private AtomicLong count = new AtomicLong(0);
 
