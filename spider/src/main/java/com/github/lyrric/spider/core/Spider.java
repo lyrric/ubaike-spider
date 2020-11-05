@@ -111,9 +111,10 @@ public class Spider {
                 if(e.getStatusCode() == HttpStatus.SC_NOT_FOUND){
                     //404代表没有数据，忽略获取下一个数据
                     webId = redisUtil.getId();
-                }else if(e.getStatusCode() == HttpStatus.SC_MOVED_TEMPORARILY){
+                }else if(e.getStatusCode() == HttpStatus.SC_MOVED_TEMPORARILY || e.getStatusCode() == HttpStatus.SC_FORBIDDEN){
                     //302代表重定向，此IP已被block
-                    log.info("http 302：{}，代理信息：{}，判定为ip blocked ，重新获取代理",e.getMessage(), proxy.toString());
+                    //304 forbidden 获取注册资本时发生错误,此IP已被block
+                    log.info("http status {}：{}，代理信息：{}，判定为ip blocked ，重新获取代理", e.getStatusCode(), e.getMessage(), proxy.toString());
                     log.info("代理blocked，该代理使用时间：{}秒，共获取数据：{}条", (int)((System.currentTimeMillis()-startTime)/1000), count);
                     count = 0;
                     proxy = proxyUtil.getOne();
