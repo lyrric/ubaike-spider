@@ -52,20 +52,31 @@ public class RedisUtil {
     /**
      * 弹出公司信息
      */
-    public CompanyInfo popCompanyInfo( ){
+    public CompanyInfo bPopCompanyInfo( ){
         final Jedis jedis = init();
         final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_COMPANY_QUEUE);
         String json = data.get(1);
         return gson.fromJson(json, CompanyInfo.class);
     }
     /**
-     * 弹出错误信息队列
+     * 阻塞弹出错误信息队列
      */
-    public ErrorLog popErrorMsg(){
+    public ErrorLog bPopErrorMsg(){
         final Jedis jedis = init();
         final List<String> data = jedis.brpop(0 ,RedisConstant.KEY_ERROR_MSG);
         String json = data.get(1);
         return gson.fromJson(json, ErrorLog.class);
     }
 
+    /**
+     * 非阻塞弹出错误信息队列
+     */
+    public ErrorLog popErrorMsg(){
+        final Jedis jedis = init();
+        final String json = jedis.rpop(RedisConstant.KEY_ERROR_MSG);
+        if(json == null){
+            return null;
+        }
+        return gson.fromJson(json, ErrorLog.class);
+    }
 }

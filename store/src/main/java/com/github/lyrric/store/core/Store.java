@@ -1,7 +1,5 @@
 package com.github.lyrric.store.core;
 
-import com.github.lyrric.common.model.CompanyInfoModel;
-import com.github.lyrric.common.model.ErrorLogModel;
 import com.github.lyrric.store.entity.CompanyInfo;
 import com.github.lyrric.store.entity.ErrorLog;
 import com.github.lyrric.store.mapper.CompanyInfoMapper;
@@ -47,18 +45,65 @@ public class Store {
         this.jdbcUtil = new JdbcUtil(properties);
     }
 
+//    public void start(){
+//        for (int i = 0; i < CORE_POOL_SIZE; i++) {
+//            executor.submit(this::insertCompanyInfo);
+//        }
+//        executor.submit(this::insertErrorLog);
+//    }
     public void start(){
-        for (int i = 0; i < CORE_POOL_SIZE; i++) {
-            executor.submit(this::insertCompanyInfo);
-        }
-        executor.submit(this::insertErrorLog);
+        executor.submit(this::insertData);
     }
 
-    public void insertCompanyInfo(){
+    public void insertData(){
+        SqlSession sqlSession = jdbcUtil.getSqlSession();
+        final CompanyInfoMapper companyInfoMapper = sqlSession.getMapper(CompanyInfoMapper.class);
+        do {
+            final CompanyInfo companyInfo = redisUtil.bPopCompanyInfo();
+            try {
+                String companyId;
+                do {
+                    companyId = generateCompanyId();
+                }while (companyInfoMapper.selectCountByCompanyId(companyId) != 0);
+                companyInfo.setCompanyId(companyId);
+                Date date = new Date();
+                companyInfo.setCreateTime(date);
+                companyInfo.setUpdateTime(date);
+                companyInfoMapper.insert(companyInfo);
+                long t;
+                if((t = count.incrementAndGet()) % 1000 == 0){
+                    log.info("已保存数据{}条", t);
+                }
+                insertErrorLog();
+            }catch (Exception e){
+                log.error("保存工商数据时发生错误,{}", companyInfo, e);
+            }
+        } while (true);
+        //sqlSession.close();
+    }
+
+    /**
+     * 非阻塞保存错误日志
+     */
+    public void insertErrorLog(){
+        final ErrorLog errorLog = redisUtil.popErrorMsg();
+        if(errorLog == null){
+            return;
+        }
+        SqlSession sqlSession = jdbcUtil.getSqlSession();
+        final ErrorLogMapper mapper = sqlSession.getMapper(ErrorLogMapper.class);
+        try {
+            mapper.insert(errorLog);
+        }catch (Exception e){
+            log.error("保存错误日志时发生错误，{}", errorLog, e);
+        }
+    }
+
+    public void insertCompanyInfoBlocked(){
         SqlSession sqlSession = jdbcUtil.getSqlSession();
         final CompanyInfoMapper mapper = sqlSession.getMapper(CompanyInfoMapper.class);
         do {
-            final CompanyInfo companyInfo = redisUtil.popCompanyInfo();
+            final CompanyInfo companyInfo = redisUtil.bPopCompanyInfo();
             try {
                 String companyId;
                 do {
@@ -80,11 +125,11 @@ public class Store {
         //sqlSession.close();
     }
 
-    public void insertErrorLog(){
+    public void insertErrorLogBlocked(){
         SqlSession sqlSession = jdbcUtil.getSqlSession();
         final ErrorLogMapper mapper = sqlSession.getMapper(ErrorLogMapper.class);
         do {
-            final ErrorLog errorLog = redisUtil.popErrorMsg();
+            final ErrorLog errorLog = redisUtil.bPopErrorMsg();
             try {
                 mapper.insert(errorLog);
             }catch (Exception e){

@@ -119,6 +119,14 @@ public class Spider {
                     count = 0;
                     proxy = proxyUtil.getOne();
                     startTime = System.currentTimeMillis();
+                }else{
+                    log.error("http状态错误{}, web id {}", e.getStatusCode(), webId, e);
+                    //未知错误，跳过当前web id，重新获取代理
+                    companyInfoModel = null;
+                    webId = redisUtil.getId();
+                    proxy = proxyUtil.getOne();
+                    count = 0;
+                    startTime = System.currentTimeMillis();
                 }
             }catch (IOException e){
                 //大概率是代理过期，重新尝试即可
@@ -130,10 +138,12 @@ public class Spider {
             }catch (ParseHtmlException e){
                 log.error("解析html错误 webId {}", webId);
                 webId = redisUtil.getId();
+                companyInfoModel = null;
             }catch (BusinessException e){
                 log.error("未知异常 webId {}", webId, e);
                 saveErrLog(webId, e.getMessage(), html);
                 webId = redisUtil.getId();
+                companyInfoModel = null;
             } catch (InterruptedException e) {
                 log.error("线程异常打断", e);
             }
