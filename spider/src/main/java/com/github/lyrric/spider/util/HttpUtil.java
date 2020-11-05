@@ -29,10 +29,11 @@ public class HttpUtil {
 
     private CloseableHttpClient httpclient;
 
+    private final int TIMEOUT = 10000;
     public HttpUtil() {
         //httpclient = HttpClients.createDefault();
         SocketConfig socketConfig = SocketConfig.custom()
-                .setSoTimeout(5000)
+                .setSoTimeout(TIMEOUT)
                 .build();
         httpclient = HttpClients.custom()
                 .setDefaultSocketConfig(socketConfig)
@@ -80,9 +81,9 @@ public class HttpUtil {
         RequestConfig.Builder builder = RequestConfig.custom();
         builder.setRedirectsEnabled(false)
                 //我猜这里的单位是毫秒
-                .setConnectTimeout(5000)
-                .setSocketTimeout(5000)
-                .setConnectionRequestTimeout(5000);
+                .setConnectTimeout(TIMEOUT)
+                .setSocketTimeout(TIMEOUT)
+                .setConnectionRequestTimeout(TIMEOUT);
         if(StringUtils.isNotEmpty(proxyHost) && port != null){
             // 设置Http代理
             HttpHost proxy = new HttpHost(proxyHost, port, scheme);
