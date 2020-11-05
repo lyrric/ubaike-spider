@@ -11,6 +11,7 @@ import com.google.gson.reflect.TypeToken;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 
+import javax.swing.plaf.synth.SynthViewportUI;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.ArrayList;
@@ -62,8 +63,10 @@ public class XieQuHttpProxy implements HttpProxy {
 
     @Override
     public HttpProxyInfo getOne() {
-        final List<HttpProxyInfo> httpProxyInfos= getList(1);
-        return httpProxyInfos.get(0);
+        synchronized (this){
+            final List<HttpProxyInfo> httpProxyInfos= getList(1);
+            return httpProxyInfos.get(0);
+        }
     }
 
     @Data
