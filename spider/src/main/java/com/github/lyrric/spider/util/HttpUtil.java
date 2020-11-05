@@ -9,6 +9,8 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.config.ConnectionConfig;
+import org.apache.http.config.SocketConfig;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.util.EntityUtils;
@@ -28,7 +30,13 @@ public class HttpUtil {
     private CloseableHttpClient httpclient;
 
     public HttpUtil() {
-        httpclient = HttpClients.createDefault();
+        //httpclient = HttpClients.createDefault();
+        SocketConfig socketConfig = SocketConfig.custom()
+                .setSoTimeout(3000)
+                .build();
+        httpclient = HttpClients.custom()
+                .setDefaultSocketConfig(socketConfig)
+                .build();
     }
 
     public String get(String url) throws IOException {
